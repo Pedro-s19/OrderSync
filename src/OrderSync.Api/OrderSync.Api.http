@@ -1,0 +1,11 @@
+@OrderSync.Api_HostAddress = http://localhost:5092
+
+GET {{OrderSync.Api_HostAddress}}/openapi/v1.json
+Accept: application/json
+
+###
+
+GET {{OrderSync.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

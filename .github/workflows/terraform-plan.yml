@@ -1,0 +1,83 @@
+name: Terraform Plan
+
+# Cada Pull Request a develop que cambie archivos de Terraform ejecuta "terraform plan"
+# contra el estado remoto (con bloqueo) y publica el resultado como comentario del PR.
+# Solo hace plan: el apply se ejecuta a mano (ver infra/README.md).
+on:
+  pull_request:
+    branches: [develop]
+    paths:
+      - '**.tf'
+      - '**.tfvars'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: terraform-plan-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  TF_ENV: dev
+  TF_IN_AUTOMATION: 'true'
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    env:
+      # Credenciales de Azure guardadas como secretos del repositorio
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Formato
+        run: terraform fmt -check -recursive
+
+      - name: Inicializar (usa el backend remoto en Azure Storage)
+        run: terraform init -input=false -backend-config="envs/${TF_ENV}/backend.hcl"
+
+      - name: Validar
+        run: terraform validate -no-color
+
+      - name: Plan
+        run: |
+          terraform plan -no-color -input=false -lock-timeout=60s \
+            -var-file="envs/${TF_ENV}/${TF_ENV}.tfvars" -out=tfplan
+          terraform show -no-color tfplan > plan.txt
+
+      - name: Comentar el plan en el PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- terraform-plan -->';
+            let plan = 'No se generó el plan: revise el job "plan" (formato, init, validate o plan).';
+            try { plan = fs.readFileSync('infra/plan.txt', 'utf8'); } catch (e) { /* sin plan */ }
+            const max = 60000;
+            if (plan.length > max) { plan = plan.slice(0, max) + '\n... (recortado)'; }
+            const fence = '```';
+            const body = `${marker}\n### Terraform plan (${process.env.TF_ENV})\n\n<details><summary>Ver el plan</summary>\n\n${fence}\n${plan}\n${fence}\n\n</details>`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const previous = comments.find(c => c.body && c.body.includes(marker));
+            if (previous) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: previous.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }

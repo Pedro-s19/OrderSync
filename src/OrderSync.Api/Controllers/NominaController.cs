@@ -1,11 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using OrderSync.Api.Security;
 using OrderSync.Application.Nomina;
+using OrderSync.Application.Seguridad;
 
 namespace OrderSync.Api.Controllers;
 
+/// <summary>Supervisor calcula el pago (RRHH, acceso parcial con alcance "pago"). Cajero y Cocina reciben 403.</summary>
 [ApiController]
 [Route("api/nomina")]
+[AutorizarModulo("RRHH", PermissionLevel.Parcial, AlcanceContiene = "pago")]
 public sealed class NominaController : ControllerBase
 {
     private readonly PayrollService _service;
@@ -16,6 +20,7 @@ public sealed class NominaController : ControllerBase
     [HttpPost("calculate")]
     [ProducesResponseType(typeof(PayrollRunResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<PayrollRunResult>> Calculate(
@@ -24,12 +29,8 @@ public sealed class NominaController : ControllerBase
         try
         {
             var result = await _service.CalculateAsync(
-                new PayrollRequest(body.Anio, body.Mes, body.EmpleadoId), ct);
+                new PayrollRequest(body.Anio, body.Mes, body.EmpleadoId, User.GetUserId()), ct);
             return Ok(result);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new ProblemDetails { Title = "Empleado no encontrado", Detail = ex.Message, Status = 404 });
         }
         catch (InvalidOperationException ex)
         {

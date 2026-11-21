@@ -1,0 +1,4 @@
+# Terraform exige saltos de línea LF; así "terraform fmt -check" no falla por culpa de Windows.
+*.tf     text eol=lf
+*.tfvars text eol=lf
+*.hcl    text eol=lf

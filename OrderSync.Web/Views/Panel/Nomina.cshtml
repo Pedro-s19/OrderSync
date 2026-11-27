@@ -1,0 +1,12 @@
+@using System.Text.Json
+@{
+ ViewData["Title"]="Nómina";
+ JsonElement employees=ViewBag.Empleados is JsonElement e ? e : default;
+ JsonElement result=ViewBag.Resultado is JsonElement r ? r : default;
+}
+<div class="page-heading"><div><span class="eyebrow">RECURSOS HUMANOS</span><h1>Calcular nómina</h1><p>Ejecuta el cálculo mensual con las asistencias registradas.</p></div></div>
+<div class="panel form-panel"><form asp-action="Nomina" method="post">@Html.AntiForgeryToken()
+<div class="form-grid"><div class="form-field"><label>Año</label><input type="number" name="anio" min="2000" max="2100" value="@DateTime.Today.Year" required/></div><div class="form-field"><label>Mes</label><input type="number" name="mes" min="1" max="12" value="@DateTime.Today.Month" required/></div><div class="form-field"><label>Empleado (opcional)</label><select name="empleadoId"><option value="">Todos los empleados</option>@if(employees.ValueKind==JsonValueKind.Array){@foreach(var e in employees.EnumerateArray()){<option value="@e.GetProperty("empleadoId")">@e.GetProperty("nombre")</option>}}</select></div></div>
+<div class="form-actions"><button class="btn btn-primary" type="submit">Calcular nómina</button></div></form>
+@if(result.ValueKind==JsonValueKind.Object){<h2>Resultado</h2><pre>@JsonSerializer.Serialize(result,new JsonSerializerOptions{WriteIndented=true})</pre>}
+</div>

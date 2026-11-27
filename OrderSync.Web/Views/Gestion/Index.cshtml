@@ -1,0 +1,227 @@
+@using System.Text.Json
+@model JsonElement
+
+@{
+    // Configuración general de la página.
+    ViewData["Title"] = ViewBag.Module;
+
+    var modulo = (string)ViewBag.ModuleKey;
+    var idField = (string)ViewBag.IdField;
+
+    // Convierte la respuesta JSON en una lista de registros.
+    var rows = Model.ValueKind == JsonValueKind.Array
+        ? Model.EnumerateArray().ToList()
+        : new List<JsonElement>();
+
+    // Obtiene el valor de una propiedad del registro.
+    string Display(JsonElement item, string key)
+    {
+        if (!item.TryGetProperty(key, out var value) ||
+            value.ValueKind == JsonValueKind.Null)
+            return "—";
+
+        if (value.ValueKind == JsonValueKind.True)
+            return "Sí";
+
+        if (value.ValueKind == JsonValueKind.False)
+            return "No";
+
+        return value.ToString();
+    }
+
+    // Obtiene las columnas disponibles en la respuesta de la API.
+    var columns = rows.Count > 0
+        ? rows[0].EnumerateObject()
+            .Select(p => p.Name)
+            .Where(n => n != "fechaRegistro")
+            .ToList()
+        : new List<string>();
+}
+
+<!-- Encabezado del módulo -->
+<div class="page-heading">
+    <div>
+        <span class="eyebrow">ADMINISTRACIÓN</span>
+        <h1>@ViewBag.Module</h1>
+        <p>Consulta y administra los registros del módulo.</p>
+    </div>
+
+    @if (ViewBag.CanCreate == true)
+    {
+        <a class="btn btn-primary"
+           asp-action="Nuevo"
+           asp-route-modulo="@modulo">
+            ＋ Nuevo registro
+        </a>
+    }
+</div>
+
+<!-- Panel principal -->
+<div class="panel">
+
+    <div class="panel-heading">
+        <div>
+            <h2>Registros</h2>
+            <span class="muted">@rows.Count elemento(s)</span>
+        </div>
+    </div>
+
+    @if (rows.Count == 0)
+    {
+        <!-- Mensaje cuando no existen registros -->
+        <div class="empty-state">
+            <div class="empty-icon">▤</div>
+            <h3>No hay registros para mostrar</h3>
+            <p>Cuando existan datos en la API aparecerán aquí.</p>
+        </div>
+    }
+    else
+    {
+        <!-- Tabla dinámica de registros -->
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        @foreach (var col in columns)
+                        {
+                            <th>
+                                @System.Text.RegularExpressions.Regex.Replace(
+                                    col,
+                                    "([a-z])([A-Z])",
+                                    "$1 $2"
+                                )
+                            </th>
+                        }
+
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var row in rows)
+                    {
+                        var id = Display(row, idField);
+
+                        // Detecta si el registro tiene un campo de estado activo.
+                        var active =
+                            row.TryGetProperty("activo", out var a)
+                                ? a.ValueKind == JsonValueKind.True
+                                : row.TryGetProperty("activa", out var aa)
+                                    && aa.ValueKind == JsonValueKind.True;
+
+                        <tr>
+                            @foreach (var col in columns)
+                            {
+                                <td>@Display(row, col)</td>
+                            }
+
+                            <td class="actions">
+
+                                <!-- Acción para editar -->
+                                @if (ViewBag.CanEdit == true && id != "—")
+                                {
+                                    <a class="text-action"
+                                       asp-action="Editar"
+                                       asp-route-modulo="@modulo"
+                                       asp-route-id="@id">
+                                        Editar
+                                    </a>
+                                }
+
+                                <!-- Acción para asignar roles a usuarios -->
+                                @if (
+                                    modulo == "Usuarios" &&
+                                    row.TryGetProperty("rolId", out var currentRole) &&
+                                    ViewBag.Roles is JsonElement roleData &&
+                                    roleData.ValueKind == JsonValueKind.Array
+                                )
+                                {
+                                    <form asp-action="AsignarRol"
+                                          method="post"
+                                          class="inline-form">
+
+                                        @Html.AntiForgeryToken()
+
+                                        <input type="hidden"
+                                               name="id"
+                                               value="@id" />
+
+                                        <select name="rolId">
+                                            @foreach (var roleItem in roleData.EnumerateArray())
+                                            {
+                                                var roleId = roleItem.GetProperty("rolId").ToString();
+                                                var roleName = roleItem.GetProperty("nombre").ToString();
+
+                                                <option value="@roleId"
+                                                        selected="@(roleId == currentRole.ToString())">
+                                                    @roleName
+                                                </option>
+                                            }
+                                        </select>
+
+                                        <button class="text-action" type="submit">
+                                            Asignar rol
+                                        </button>
+                                    </form>
+                                }
+
+                                <!-- Acción para cancelar turnos programados -->
+                                @if (
+                                    modulo == "Turnos" &&
+                                    ViewBag.CanEdit == true &&
+                                    id != "—" &&
+                                    Display(row, "estado") == "PROGRAMADO"
+                                )
+                                {
+                                    <form asp-action="CancelarTurno"
+                                          method="post"
+                                          class="inline-form">
+
+                                        @Html.AntiForgeryToken()
+
+                                        <input type="hidden"
+                                               name="id"
+                                               value="@id" />
+
+                                        <button class="text-action" type="submit">
+                                            Cancelar turno
+                                        </button>
+                                    </form>
+                                }
+
+                                <!-- Acción para activar o desactivar registros -->
+                                @if (ViewBag.CanDeactivate == true && id != "—")
+                                {
+                                    <form asp-action="CambiarEstado"
+                                          method="post"
+                                          class="inline-form">
+
+                                        @Html.AntiForgeryToken()
+
+                                        <input type="hidden"
+                                               name="modulo"
+                                               value="@modulo" />
+
+                                        <input type="hidden"
+                                               name="id"
+                                               value="@id" />
+
+                                        <input type="hidden"
+                                               name="activar"
+                                               value="@(active ? "false" : "true")" />
+
+                                        <button class="text-action" type="submit">
+                                            @(active ? "Desactivar" : "Activar")
+                                        </button>
+                                    </form>
+                                }
+
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+</div>

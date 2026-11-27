@@ -1,0 +1,93 @@
+@using System.Text.Json
+@model JsonElement
+@{
+    ViewData["Title"] = $"Orden de compra #{Model.GetProperty("ordenCompraId")}";
+    var id = Model.GetProperty("ordenCompraId").ToString();
+    var estado = Model.GetProperty("estado").ToString();
+    var admin = Context.Session.GetString("Rol") == "Administrador del Sistema";
+    var lineas = Model.TryGetProperty("lineas", out var l) && l.ValueKind == JsonValueKind.Array
+        ? l.EnumerateArray().ToList() : new List<JsonElement>();
+}
+<div class="page-heading">
+    <div><span class="eyebrow">ABASTECIMIENTO</span><h1>Orden de compra #@id</h1><p>Detalle de productos, cantidades recibidas e historial de recepción.</p></div>
+    <a class="btn btn-secondary" asp-action="Compras">← Volver a órdenes</a>
+</div>
+<div class="stats-grid">
+    <div class="stat-card"><span>Proveedor</span><strong>@Model.GetProperty("proveedor")</strong></div>
+    <div class="stat-card"><span>Estado</span><strong>@estado</strong></div>
+    <div class="stat-card"><span>Total</span><strong>@Model.GetProperty("total").GetDecimal().ToString("C", System.Globalization.CultureInfo.GetCultureInfo("es-CO"))</strong></div>
+</div>
+<div class="panel">
+    <div class="panel-heading"><div><h2>Detalle de la orden</h2><span class="muted">Creada: @Model.GetProperty("fechaCreacion") · Entrega esperada: @(Model.TryGetProperty("fechaEsperada", out var fe) ? fe.ToString() : "Sin fecha")</span></div></div>
+    <div class="table-wrap"><table class="data-table"><thead><tr><th>Ingrediente</th><th>Unidad</th><th>Solicitado</th><th>Recibido</th><th>Pendiente</th><th>Precio unitario</th><th>Subtotal</th></tr></thead><tbody>
+    @foreach (var line in lineas)
+    {
+        var requested = line.GetProperty("cantidad").GetDecimal();
+        var received = line.GetProperty("cantidadRecibida").GetDecimal();
+        <tr><td>@line.GetProperty("ingrediente")</td><td>@line.GetProperty("unidadMedida")</td><td>@requested</td><td>@received</td><td>@(requested - received)</td><td>@line.GetProperty("precioUnitario")</td><td>@line.GetProperty("subtotal")</td></tr>
+    }
+    </tbody></table></div>
+</div>
+@if (admin && estado == "ENVIADA")
+{
+    <div class="panel form-panel">
+        <div class="panel-heading"><div><h2>Registrar recepción de mercancía</h2><p class="muted">Registra únicamente las cantidades que llegaron en esta entrega. El inventario se actualizará al confirmar.</p></div></div>
+        <form asp-action="RegistrarRecepcion" method="post" id="receipt-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@id" />
+            <input type="hidden" name="lineasJson" id="receipt-lines" />
+            <div class="table-wrap"><table class="data-table"><thead><tr><th>Ingrediente</th><th>Pendiente por recibir</th><th>Cantidad recibida ahora</th></tr></thead><tbody>
+            @foreach (var line in lineas)
+            {
+                var pending = line.GetProperty("cantidad").GetDecimal() - line.GetProperty("cantidadRecibida").GetDecimal();
+                <tr><td>@line.GetProperty("ingrediente")</td><td>@pending</td><td><input class="receipt-quantity" type="number" min="0" max="@pending" step="0.01" value="0" data-detail-id="@line.GetProperty("detalleId")" data-pending="@pending" /></td></tr>
+            }
+            </tbody></table></div>
+            <div class="form-field"><label for="observaciones">Observaciones de recepción</label><textarea id="observaciones" name="observaciones" rows="3" maxlength="500"></textarea></div>
+            <div class="form-actions"><button class="btn btn-primary" type="submit">Confirmar recepción</button></div>
+        </form>
+    </div>
+}
+@if (Model.TryGetProperty("recepciones", out var receipts) && receipts.ValueKind == JsonValueKind.Array && receipts.GetArrayLength() > 0)
+{
+    <div class="panel"><div class="panel-heading"><div><h2>Historial de recepciones</h2></div></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>Recepción</th><th>Fecha</th><th>Entrega a tiempo</th><th>Observaciones</th></tr></thead><tbody>
+        @foreach (var receipt in receipts.EnumerateArray())
+        { <tr><td>#@receipt.GetProperty("recepcionId")</td><td>@receipt.GetProperty("fecha")</td><td>@(receipt.TryGetProperty("entregaATiempo", out var timely) ? timely.ToString() : "—")</td><td>@(receipt.TryGetProperty("observaciones", out var notes) ? notes.ToString() : "—")</td></tr> }
+        </tbody></table></div>
+    </div>
+}
+@section Scripts {
+<script>
+(() => {
+    const form = document.getElementById('receipt-form');
+    if (!form) return;
+    form.addEventListener('submit', event => {
+        const lines = [];
+        let total = 0;
+        form.querySelectorAll('.receipt-quantity').forEach(input => {
+            const quantity = Number(input.value || 0);
+            const pending = Number(input.dataset.pending || 0);
+            if (quantity < 0 || quantity > pending) {
+                input.setCustomValidity('La cantidad debe estar entre cero y el pendiente.');
+                input.reportValidity();
+                event.preventDefault();
+                return;
+            }
+            input.setCustomValidity('');
+            if (quantity > 0) {
+                lines.push({ detalleId: Number(input.dataset.detailId), cantidad: quantity });
+                total += quantity;
+            }
+        });
+        if (event.defaultPrevented) return;
+        if (total <= 0) {
+            event.preventDefault();
+            alert('Registra al menos una cantidad recibida mayor que cero.');
+            return;
+        }
+        document.getElementById('receipt-lines').value = JSON.stringify(lines);
+    });
+})();
+</script>
+}

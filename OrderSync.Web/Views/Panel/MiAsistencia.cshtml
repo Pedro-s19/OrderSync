@@ -1,0 +1,162 @@
+@using System.Text.Json
+@model List<JsonElement>
+
+@{
+    ViewData["Title"] = "Mi asistencia";
+
+    // Si existe una asistencia sin salida, el empleado ya marcó entrada.
+    var hayEntradaAbierta = Model?.Any(a =>
+    {
+        if (!a.TryGetProperty("salida", out var salida))
+            return true;
+
+        return salida.ValueKind == JsonValueKind.Null
+            || salida.ValueKind == JsonValueKind.Undefined
+            || (salida.ValueKind == JsonValueKind.String
+                && string.IsNullOrWhiteSpace(salida.GetString()));
+    }) ?? false;
+}
+
+<div class="page-heading">
+    <div>
+        <span class="eyebrow">RECURSOS HUMANOS</span>
+        <h1>Mi asistencia</h1>
+        <p>Registra tu entrada y salida según tu turno programado.</p>
+    </div>
+</div>
+
+<div class="panel">
+
+    <div class="form-actions"
+         style="justify-content:flex-start;margin:0 0 20px;padding:0;border:0">
+
+        <!-- FORMULARIO DE ENTRADA -->
+        <form asp-action="MarcarAsistencia"
+              method="post"
+              class="attendance-action-form">
+
+            @Html.AntiForgeryToken()
+
+            <input type="hidden" name="accion" value="entrada" />
+
+            <button type="submit"
+                    class="btn btn-primary"
+                    disabled="@hayEntradaAbierta">
+
+                Marcar entrada
+            </button>
+        </form>
+
+        <!-- FORMULARIO DE SALIDA -->
+        <form asp-action="MarcarAsistencia"
+              method="post"
+              class="attendance-action-form">
+
+            @Html.AntiForgeryToken()
+
+            <input type="hidden" name="accion" value="salida" />
+
+            <button type="submit"
+                    class="btn btn-secondary"
+                    disabled="@(!hayEntradaAbierta)">
+
+                Marcar salida
+            </button>
+        </form>
+
+    </div>
+
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Turno</th>
+                    <th>Entrada</th>
+                    <th>Salida</th>
+                    <th>Horas</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (Model == null || !Model.Any())
+                {
+                    <tr>
+                        <td colspan="4">No hay registros de asistencia.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var a in Model)
+                    {
+                        <tr>
+                            <td>@a.GetProperty("turnoInicio")</td>
+
+                            <td>@a.GetProperty("entrada")</td>
+
+                            <td>
+                                @(a.TryGetProperty("salida", out var salida)
+                                    && salida.ValueKind != JsonValueKind.Null
+                                    && salida.ValueKind != JsonValueKind.Undefined
+                                    ? salida.ToString()
+                                    : "Pendiente")
+                            </td>
+
+                            <td>
+                                @(a.TryGetProperty("horas", out var horas)
+                                    ? horas.ToString()
+                                    : "—")
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const forms = document.querySelectorAll(
+                ".attendance-action-form"
+            );
+
+            forms.forEach(function (form) {
+
+                form.addEventListener("submit", function (event) {
+
+                    // Evita enviar dos veces el mismo formulario.
+                    if (form.dataset.submitting === "true") {
+                        event.preventDefault();
+                        return;
+                    }
+
+                    form.dataset.submitting = "true";
+
+                    // Bloquea ambos botones mientras se procesa la solicitud.
+                    forms.forEach(function (otherForm) {
+                        const button = otherForm.querySelector(
+                            'button[type="submit"]'
+                        );
+
+                        if (button) {
+                            button.disabled = true;
+                        }
+                    });
+
+                    const button = form.querySelector(
+                        'button[type="submit"]'
+                    );
+
+                    if (button) {
+                        button.textContent = "Procesando...";
+                    }
+                });
+
+            });
+
+        });
+    </script>
+}

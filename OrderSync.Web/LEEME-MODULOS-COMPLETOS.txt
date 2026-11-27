@@ -1,0 +1,55 @@
+ORDERSYNC WEB - MODULOS INTEGRADOS
+=================================
+
+Proyecto: ASP.NET Core MVC / Razor (OrderSync.Web)
+API: https://localhost:7083/ (configurable en appsettings.json)
+La web consume la API; no se conecta directamente a SQL Server.
+
+MODULOS DISPONIBLES
+-------------------
+- Inicio y navegación por rol.
+- Pedidos: consulta, creación y confirmación.
+- Cocina: consulta de órdenes y marcado como listo (módulo existente).
+- Productos: consulta y CRUD (crear, editar, activar/desactivar) para Cajero.
+- Clientes: CRUD y activación/desactivación.
+- Promociones: CRUD y activación/desactivación.
+- Inventario: alertas, atención de alertas, catálogo de ingredientes, mermas, ajustes y movimientos.
+- Recetas: consulta y edición del arreglo de ingredientes por producto.
+- Empleados: CRUD y activación/desactivación.
+- Turnos: creación, edición y cancelación.
+- Asistencia: consulta administrativa y marcación propia para Cajero/Cocina.
+- Proveedores: CRUD y activación/desactivación.
+- Órdenes de compra: consulta, creación de borrador, envío y cancelación.
+- Facturación: registro de cobro de pedidos y consulta de facturas.
+- Reportes: ventas por día y productos más vendidos.
+- Nómina: ejecución del cálculo mensual.
+- Usuarios: creación y asignación de rol.
+
+NOTAS IMPORTANTES
+-----------------
+1. Los botones y formularios invocan rutas reales de los controladores de la API.
+2. Los permisos definitivos se validan en el backend. Un usuario sin permiso recibirá el mensaje de acceso denegado.
+3. Algunas operaciones complejas usan JSON para sus líneas:
+   - Recetas: [{ "ingredienteId": 1, "cantidad": 0.15 }]
+   - Órdenes de compra: [{ "ingredienteId": 1, "cantidad": 10, "precioUnitario": null }]
+   Reemplaza los IDs por los que existan en tu base de datos.
+4. Para crear usuarios, el formulario solicita RolId. Consulta los roles que aparecen en la tabla de usuarios antes de asignarlo.
+5. La marcación propia de asistencia requiere que la cuenta esté vinculada a una ficha de empleado.
+6. El cobro debe tener pagos que sumen exactamente el total calculado por la API.
+7. No se ejecuta Terraform ni se modifica la base de datos desde esta web.
+8. Verifica appsettings.json si la API usa otro puerto o certificado HTTPS.
+
+EJECUCIÓN
+---------
+1. Abrir OrderSync.slnx en Visual Studio.
+2. Establecer OrderSync.Api y OrderSync.Web como proyectos de inicio.
+3. Confirmar que OrderSyncApi:BaseUrl apunte a la URL HTTPS de la API.
+4. Ejecutar ambos proyectos.
+5. Iniciar sesión con un usuario/rol existente en la base de datos.
+6. Probar cada módulo con un rol que tenga permisos en el backend.
+
+VALIDACIÓN
+----------
+Este paquete se preparó a partir de los controladores y contratos que estaban en el ZIP recibido.
+En este entorno no está instalado el SDK de .NET, por lo que no fue posible compilar ni ejecutar la solución aquí.
+Es obligatorio abrirla y ejecutar Build > Rebuild Solution en Visual Studio, corregir cualquier error que aparezca y probar los flujos contra la base de datos local antes de grabar la exposición.

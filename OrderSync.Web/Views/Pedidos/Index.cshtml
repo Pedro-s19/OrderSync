@@ -1,0 +1,123 @@
+@model List<OrderSync.Web.Services.OrderSummaryDto>
+@{
+    ViewData["Title"] = "Pedidos";
+    var role = Context.Session.GetString("Rol") ?? string.Empty;
+    var canOperateOrders = role is "Cajero" or "Administrador del Sistema";
+}
+
+<div class="page-heading">
+    <div>
+        <span class="eyebrow purple">OPERACIÓN DEL RESTAURANTE</span>
+        <h1>Pedidos</h1>
+        <p class="muted">Consulta y administra las órdenes registradas en el restaurante.</p>
+    </div>
+
+    @if (canOperateOrders)
+    {
+        <a class="btn-primary" asp-action="Crear">＋ Crear pedido</a>
+    }
+</div>
+
+<div class="metric-grid">
+    <article class="metric-card">
+        <div class="metric-top">
+            <span>Pedidos consultados</span>
+            <span class="metric-icon purple-bg">▤</span>
+        </div>
+        <strong>@Model.Count</strong>
+        <small>Registros recibidos desde la API</small>
+    </article>
+
+    <article class="metric-card">
+        <div class="metric-top">
+            <span>En borrador</span>
+            <span class="metric-icon gold">◷</span>
+        </div>
+        <strong>@Model.Count(x => x.Estado == "BORRADOR")</strong>
+        <small>Pendientes de confirmar</small>
+    </article>
+
+    <article class="metric-card">
+        <div class="metric-top">
+            <span>En preparación</span>
+            <span class="metric-icon green">♨</span>
+        </div>
+        <strong>@Model.Count(x => x.Estado is "CONFIRMADO" or "EN_COCINA")</strong>
+        <small>Enviados a cocina</small>
+    </article>
+</div>
+
+<div class="panel table-panel">
+    <div class="table-toolbar">
+        <div>
+            <h3>Listado de pedidos</h3>
+            <p class="muted">Datos reales de <code>GET /api/pedidos</code>.</p>
+        </div>
+        <input class="table-search"
+               type="search"
+               placeholder="Buscar pedido..."
+               data-table-search />
+    </div>
+
+    <div class="table-scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th>N.º</th>
+                    <th>CANAL</th>
+                    <th>FECHA</th>
+                    <th>ESTADO</th>
+                    <th>TOTAL</th>
+                    <th>ACCIÓN</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            No hay pedidos registrados todavía.
+                        </td>
+                    </tr>
+                }
+
+                @foreach (var order in Model.OrderByDescending(x => x.FechaCreacion))
+                {
+                    <tr>
+                        <td class="id-cell">#@order.PedidoId</td>
+                        <td>@order.Canal</td>
+                        <td>@order.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td><span class="state-pill">@order.Estado</span></td>
+                        <td class="price-cell">
+                            @order.Total.ToString("C0", new System.Globalization.CultureInfo("es-CO"))
+                        </td>
+                        <td>
+                            <div class="action-group">
+                                @if (canOperateOrders && order.Estado == "BORRADOR")
+                                {
+                                    <form asp-action="Confirmar" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@order.PedidoId" />
+                                        <button class="btn-small" type="submit">
+                                            Confirmar y descontar stock
+                                        </button>
+                                    </form>
+                                }
+                                else if (!canOperateOrders)
+                                {
+                                    <span class="muted">Solo consulta</span>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="notice">
+    <b>Flujo:</b> el Cajero crea un pedido en borrador y lo confirma. El Administrador del Sistema
+    también puede operar pedidos. La API valida la receta y descuenta inventario en una transacción;
+    después aparece en la pantalla de Cocina.
+</div>

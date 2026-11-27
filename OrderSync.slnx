@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OrderSync.Api/OrderSync.Api.csproj" />
+    <Project Path="src/OrderSync.Application/OrderSync.Application.csproj" />
+    <Project Path="src/OrderSync.Domain/OrderSync.Domain.csproj" />
+    <Project Path="src/OrderSync.Infrastructure/OrderSync.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OrderSync.Tests/OrderSync.Tests.csproj" />
+  </Folder>
+  <Project Path="OrderSync-MVC-Razor/OrderSync.Web/OrderSync.Web.csproj" />
+</Solution>

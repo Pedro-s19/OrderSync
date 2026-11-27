@@ -1,0 +1,85 @@
+@using System.Text.Json
+@model List<JsonElement>
+@{
+    ViewData["Title"] = "Órdenes de compra";
+    var isAdministrator = Context.Session.GetString("Rol") == "Administrador del Sistema";
+}
+
+<div class="page-heading">
+    <div>
+        <span class="eyebrow">ABASTECIMIENTO</span>
+        <h1>Órdenes de compra</h1>
+        <p>Consulta las órdenes enviadas a proveedores.</p>
+    </div>
+
+    @if (isAdministrator)
+    {
+        <a class="btn btn-primary" asp-action="NuevaCompra">＋ Nueva orden</a>
+    }
+</div>
+
+<div class="panel">
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Proveedor</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                    <th>Fecha esperada</th>
+                    <th>Total</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="7">No hay órdenes de compra.</td>
+                    </tr>
+                }
+
+                @foreach (var order in Model)
+                {
+                    var id = order.GetProperty("ordenCompraId").ToString();
+                    var state = order.GetProperty("estado").ToString();
+
+                    <tr>
+                        <td>#@id</td>
+                        <td>@order.GetProperty("proveedor")</td>
+                        <td>@state</td>
+                        <td>@order.GetProperty("fechaCreacion")</td>
+                        <td>
+                            @(order.TryGetProperty("fechaEsperada", out var expectedDate)
+                                ? expectedDate.ToString()
+                                : "—")
+                        </td>
+                        <td>@order.GetProperty("total")</td>
+                        <td>
+                            @if (isAdministrator && state == "BORRADOR")
+                            {
+                                <form asp-action="AccionCompra" method="post" class="inline-form">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@id" />
+                                    <input type="hidden" name="accion" value="enviar" />
+                                    <button class="text-action" type="submit">Enviar</button>
+                                </form>
+                            }
+
+                            @if (isAdministrator && (state is "BORRADOR" or "ENVIADA"))
+                            {
+                                <form asp-action="AccionCompra" method="post" class="inline-form">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@id" />
+                                    <input type="hidden" name="accion" value="cancelar" />
+                                    <button class="text-action" type="submit">Cancelar</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

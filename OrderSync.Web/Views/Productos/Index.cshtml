@@ -1,0 +1,79 @@
+@model List<ProductDto>
+@{
+    ViewData["Title"] = "Productos";
+    var role = Context.Session.GetString("Rol") ?? string.Empty;
+    var canManageCatalog = role is "Cajero" or "Administrador del Sistema";
+}
+
+<div class="page-heading">
+    <div>
+        <span class="eyebrow purple">MENÚ DEL RESTAURANTE</span>
+        <h1>Productos</h1>
+        <p class="muted">Consulta el catálogo de productos disponible para la venta.</p>
+    </div>
+
+    <div class="heading-actions">
+        <span class="count-pill">@Model.Count productos</span>
+        @if (canManageCatalog)
+        {
+            <a class="btn-primary"
+               asp-controller="Gestion"
+               asp-action="Index"
+               asp-route-modulo="Productos">
+                Administrar catálogo
+            </a>
+        }
+    </div>
+</div>
+
+<div class="panel table-panel">
+    <div class="table-toolbar">
+        <div>
+            <h3>Catálogo</h3>
+            <p class="muted">Datos consultados desde <code>GET /api/productos</code>.</p>
+        </div>
+        <input class="table-search"
+               type="search"
+               placeholder="Buscar producto..."
+               data-table-search />
+    </div>
+
+    <div class="table-scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>PRODUCTO</th>
+                    <th>CATEGORÍA</th>
+                    <th>PRECIO</th>
+                    <th>ESTADO</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="5" class="empty-state">No hay productos para mostrar.</td>
+                    </tr>
+                }
+
+                @foreach (var product in Model)
+                {
+                    <tr>
+                        <td class="id-cell">#@product.ProductoId</td>
+                        <td><strong>@product.Nombre</strong></td>
+                        <td>@(product.Categoria ?? "Sin categoría")</td>
+                        <td class="price-cell">
+                            @product.Precio.ToString("C0", new System.Globalization.CultureInfo("es-CO"))
+                        </td>
+                        <td>
+                            <span class="state-pill @(product.Activo ? "state-active" : "state-inactive")">
+                                @(product.Activo ? "Activo" : "Inactivo")
+                            </span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

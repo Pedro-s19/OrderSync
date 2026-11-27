@@ -1,0 +1,248 @@
+@{
+    var token = Context.Session.GetString("Token");
+    var logged = !string.IsNullOrWhiteSpace(token);
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
+    var role = Context.Session.GetString("Rol") ?? string.Empty;
+    var userName = Context.Session.GetString("Nombre") ?? "Usuario";
+    var avatar = string.IsNullOrWhiteSpace(userName) ? "U" : userName[..1].ToUpperInvariant();
+
+    var isAdministrator = string.Equals(
+        role,
+        "Administrador del Sistema",
+        StringComparison.OrdinalIgnoreCase
+    );
+    var isCashier = role == "Cajero";
+    var isKitchen = role == "Cocina";
+
+    var canReadOrders = (role is "Cajero" or "Cocina" or "Supervisor" or "Gerencia")
+        || isAdministrator;
+    var canReadInventory = (role is "Supervisor" or "Gerencia") || isAdministrator;
+    var canReadCrm = (role is "Cajero" or "Supervisor" or "Gerencia") || isAdministrator;
+    var canReadHr = (role is "Supervisor" or "Gerencia") || isAdministrator;
+    var canReadBilling = (role is "Supervisor" or "Gerencia") || isAdministrator;
+    var canReadSuppliers = (role is "Supervisor" or "Gerencia") || isAdministrator;
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] - OrderSync</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/demo-flow.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/layout-fixes.css" asp-append-version="true" />
+</head>
+<body class="@(logged ? "app-body" : "auth-body")">
+    @if (logged)
+    {
+        <aside class="sidebar">
+            <a class="brand" asp-controller="Home" asp-action="Index">
+                <span class="brand-mark">O</span>
+                <span>
+                    Order<span class="brand-accent">Sync</span>
+                    <small>RESTAURANT ERP</small>
+                </span>
+            </a>
+
+            <div class="side-label">MENÚ PRINCIPAL</div>
+            <nav class="side-nav" aria-label="Navegación principal">
+                <a class="@(currentController == "Home" ? "active" : "")"
+                   asp-controller="Home" asp-action="Index">
+                    <span>▦</span> Mi resumen
+                </a>
+
+                @if (isKitchen)
+                {
+                    <a class="@(currentController == "Cocina" ? "active" : "")"
+                       asp-controller="Cocina" asp-action="Index">
+                        <span>♨</span> Pantalla de cocina
+                    </a>
+                }
+                else if (canReadOrders)
+                {
+                    <a class="@(currentController == "Pedidos" ? "active" : "")"
+                       asp-controller="Pedidos" asp-action="Index">
+                        <span>▤</span> Pedidos
+                    </a>
+                }
+
+                @if (canReadOrders && !isKitchen)
+                {
+                    <a class="@(currentController == "Productos" ? "active" : "")"
+                       asp-controller="Productos" asp-action="Index">
+                        <span>☷</span> Productos
+                    </a>
+                }
+
+                @if (canReadInventory)
+                {
+                    <a class="@(currentController == "Inventario" ? "active" : "")"
+                       asp-controller="Inventario" asp-action="Index">
+                        <span>▧</span> Inventario / alertas
+                    </a>
+                    <a asp-controller="Gestion" asp-action="Index" asp-route-modulo="Ingredientes">
+                        <span>◈</span> Ingredientes
+                    </a>
+                    <a asp-controller="Gestion" asp-action="Index" asp-route-modulo="Movimientos">
+                        <span>⇄</span> Movimientos
+                    </a>
+                    <a asp-controller="Operaciones" asp-action="Recetas">
+                        <span>◈</span> Recetas
+                    </a>
+                }
+
+                @if (canReadCrm)
+                {
+                    <a asp-controller="Gestion" asp-action="Index" asp-route-modulo="Clientes">
+                        <span>♙</span> Clientes
+                    </a>
+                }
+
+                @if (isCashier || isAdministrator)
+                {
+                    <a asp-controller="Panel" asp-action="Cobrar">
+                        <span>＄</span> Registrar cobro
+                    </a>
+                }
+
+                @if (isCashier || isKitchen)
+                {
+                    <a asp-controller="Panel" asp-action="MiAsistencia">
+                        <span>✓</span> Mi asistencia
+                    </a>
+                }
+
+                @if (role == "Supervisor" || isAdministrator)
+                {
+                    <a asp-controller="Panel" asp-action="Movimiento">
+                        <span>⇄</span> Mermas y ajustes
+                    </a>
+                }
+
+                @if (canReadBilling)
+                {
+                    <a asp-controller="Panel" asp-action="Ventas">
+                        <span>▥</span> Reportes de ventas
+                    </a>
+                    <a asp-controller="Gestion" asp-action="Index" asp-route-modulo="Facturas">
+                        <span>＄</span> Facturación
+                    </a>
+                }
+
+                @if (role == "Supervisor" || isAdministrator)
+                {
+                    <a asp-controller="Panel" asp-action="Nomina">
+                        <span>＄</span> Nómina
+                    </a>
+                }
+
+                @if (role is "Supervisor" or "Gerencia")
+                {
+                    <a class="@(currentController == "Panel" && ViewContext.RouteData.Values["action"]?.ToString() == "Turnos" ? "active" : "")"
+                       asp-controller="Panel" asp-action="Turnos">
+                        <span>▦</span> Programación de turnos
+                    </a>
+                }
+
+                @if (role == "Gerencia" || isAdministrator)
+                {
+                    <a asp-controller="Gestion" asp-action="Index" asp-route-modulo="Promociones">
+                        <span>✦</span> Promociones
+                    </a>
+                }
+
+                @if (canReadHr)
+                {
+                    <a asp-controller="Gestion" asp-action="Index" asp-route-modulo="Empleados">
+                        <span>♧</span> Empleados
+                    </a>
+                    <a asp-controller="Gestion" asp-action="Index" asp-route-modulo="Turnos">
+                        <span>◷</span> Turnos
+                    </a>
+                    <a asp-controller="Gestion" asp-action="Index" asp-route-modulo="Asistencia">
+                        <span>✓</span> Asistencia
+                    </a>
+                }
+
+                @if (canReadSuppliers)
+                {
+                    <a asp-controller="Gestion" asp-action="Index" asp-route-modulo="Proveedores">
+                        <span>▣</span> Proveedores
+                    </a>
+                    <a asp-controller="Operaciones" asp-action="Compras">
+                        <span>▤</span> Órdenes de compra
+                    </a>
+                }
+
+                @if (isAdministrator)
+                {
+                    <a asp-controller="Gestion" asp-action="Index" asp-route-modulo="Usuarios">
+                        <span>♙</span> Usuarios y roles
+                    </a>
+                }
+
+                <div class="side-label side-label-spaced">SESIÓN</div>
+                <div class="profile-menu-note">@role</div>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <div class="status-dot"></div>
+                <span>OrderSync API</span>
+                <small>Operaciones conectadas al backend</small>
+            </div>
+        </aside>
+
+        <main class="main-area">
+            <header class="topbar">
+                <div class="topbar-heading">
+                    <span class="topbar-caption">PANEL DE CONTROL</span>
+                    <strong>Gestión del restaurante</strong>
+                </div>
+
+                <div class="profile">
+                    <div class="avatar">@avatar</div>
+                    <div class="profile-details">
+                        <strong>@userName</strong>
+                        <small>@role</small>
+                    </div>
+                    <form asp-controller="Auth" asp-action="Logout" method="post">
+                        @Html.AntiForgeryToken()
+                        <button class="logout" type="submit" title="Cerrar sesión" aria-label="Cerrar sesión">
+                            ↪
+                        </button>
+                    </form>
+                </div>
+            </header>
+
+            <section class="page-content">
+                @if (TempData["Error"] != null)
+                {
+                    <div class="alert alert-error">@TempData["Error"]</div>
+                }
+
+                @if (TempData["Ok"] != null)
+                {
+                    <div class="alert alert-success">@TempData["Ok"]</div>
+                }
+
+                @RenderBody()
+            </section>
+
+            <footer class="footer">
+                OrderSync ERP <span>•</span> Gestión inteligente para restaurantes
+            </footer>
+        </main>
+    }
+    else
+    {
+        @RenderBody()
+    }
+
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

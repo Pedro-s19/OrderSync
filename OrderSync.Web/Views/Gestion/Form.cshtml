@@ -1,0 +1,31 @@
+@{
+    ViewData["Title"] = ViewBag.ItemId == null ? "Nuevo " + ViewBag.Module : "Editar " + ViewBag.Module;
+    var fields = (OrderSync.Web.Controllers.GestionField[])ViewBag.Fields;
+    var values = (Dictionary<string,string?>)ViewBag.Values;
+    var modulo = (string)ViewBag.ModuleKey;
+    var id = (string?)ViewBag.ItemId;
+}
+<div class="page-heading"><div><span class="eyebrow">ADMINISTRACIÓN</span><h1>@ViewData["Title"]</h1><p>Completa la información y guarda los cambios.</p></div><a class="btn btn-secondary" asp-action="Index" asp-route-modulo="@modulo">← Volver</a></div>
+<div class="panel form-panel">
+<form asp-action="Guardar" method="post">
+  @Html.AntiForgeryToken()
+  <input type="hidden" name="modulo" value="@modulo"/>
+  @if (id != null) { <input type="hidden" name="id" value="@id"/> }
+  <div class="form-grid">
+  @foreach (var field in fields) {
+    <div class="form-field">
+      <label for="@field.Name">@field.Label @(field.Required ? "*" : "")</label>
+      @if (modulo == "Usuarios" && field.Name == "rolId" && ViewBag.Roles is System.Text.Json.JsonElement roles && roles.ValueKind == System.Text.Json.JsonValueKind.Array) {
+        <select id="@field.Name" name="values[@field.Name]" required>
+          <option value="">Selecciona un rol</option>
+          @foreach (var roleItem in roles.EnumerateArray()) { <option value="@roleItem.GetProperty("rolId")">@roleItem.GetProperty("nombre")</option> }
+        </select>
+      } else {
+        <input id="@field.Name" name="values[@field.Name]" type="@field.Type" step="@field.Step" value="@(values.TryGetValue(field.Name,out var v) ? v : "")" required="@field.Required" />
+      }
+    </div>
+  }
+  </div>
+  <div class="form-actions"><a class="btn btn-secondary" asp-action="Index" asp-route-modulo="@modulo">Cancelar</a><button class="btn btn-primary" type="submit">Guardar cambios</button></div>
+</form>
+</div>

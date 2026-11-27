@@ -1,0 +1,12 @@
+@using System.Text.Json
+@{
+ ViewData["Title"]="Nueva orden de compra";
+ JsonElement suppliers=ViewBag.Proveedores is JsonElement s ? s : default;
+}
+<div class="page-heading"><div><span class="eyebrow">ABASTECIMIENTO</span><h1>Nueva orden de compra</h1><p>Crea una orden en estado BORRADOR.</p></div></div>
+<div class="panel form-panel"><form asp-action="NuevaCompra" method="post">@Html.AntiForgeryToken()
+<div class="form-grid"><div class="form-field"><label>Proveedor</label><select name="proveedorId" required><option value="">Selecciona</option>@if(suppliers.ValueKind==JsonValueKind.Array){@foreach(var p in suppliers.EnumerateArray()){<option value="@p.GetProperty("proveedorId")">@p.GetProperty("nombre")</option>}}</select></div><div class="form-field"><label>Fecha esperada</label><input type="date" name="fechaEsperada"/></div></div>
+<div class="form-field"><label>Líneas de compra (JSON)</label><textarea name="lineasJson" rows="8" required>[{"ingredienteId":1,"cantidad":10,"precioUnitario":null}]</textarea></div>
+<p class="muted">Reemplaza el ingredienteId por uno existente. Si precioUnitario es null, la API intenta usar el precio registrado para ese proveedor.</p>
+<div class="form-actions"><button class="btn btn-primary" type="submit">Crear orden</button></div>
+</form></div>

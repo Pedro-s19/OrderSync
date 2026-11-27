@@ -1,0 +1,11 @@
+@{ViewData["Title"]="Registrar cobro";}
+<div class="page-heading"><div><span class="eyebrow">PUNTO DE VENTA</span><h1>Registrar cobro</h1><p>Genera la factura de un pedido confirmado.</p></div></div>
+<div class="panel form-panel"><form asp-action="Cobrar" method="post">@Html.AntiForgeryToken()
+<div class="form-grid">
+<div class="form-field"><label>ID del pedido</label><input type="number" name="pedidoId" min="1" required/></div>
+<div class="form-field"><label>Propina</label><input type="number" name="propina" min="0" step="0.01" value="0"/></div>
+<div class="form-field"><label>Método de pago</label><select name="metodo"><option>EFECTIVO</option><option>TARJETA</option><option>DIGITAL</option></select></div>
+<div class="form-field"><label>Monto recibido</label><input type="number" name="monto" min="0.01" step="0.01" required/></div>
+</div><p class="muted">El monto del pago debe coincidir exactamente con el total calculado por la API (incluida propina y descuentos).</p>
+<div class="form-actions"><button class="btn btn-primary" type="submit">Registrar cobro</button></div>
+</form></div>

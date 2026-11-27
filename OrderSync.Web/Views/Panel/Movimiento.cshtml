@@ -1,0 +1,11 @@
+@{ViewData["Title"]="Movimientos de inventario";}
+<div class="page-heading"><div><span class="eyebrow">INVENTARIO</span><h1>Mermas y ajustes</h1><p>Registra pérdidas o corrige el stock físico mediante la API.</p></div></div>
+<div class="panel form-panel"><form asp-action="Movimiento" method="post">@Html.AntiForgeryToken()
+<div class="form-grid">
+<div class="form-field"><label>Tipo de movimiento</label><select name="tipo" id="tipoMovimiento" onchange="document.getElementById('cantidadWrap').hidden=this.value!=='MERMA';document.getElementById('stockWrap').hidden=this.value!=='AJUSTE'"><option value="MERMA">Merma</option><option value="AJUSTE">Ajuste de stock</option></select></div>
+<div class="form-field"><label>ID del ingrediente</label><input type="number" name="ingredienteId" min="1" required/></div>
+<div class="form-field" id="cantidadWrap"><label>Cantidad perdida</label><input type="number" name="cantidad" min="0.01" step="0.01"/></div>
+<div class="form-field" id="stockWrap" hidden><label>Stock real contado</label><input type="number" name="stockReal" min="0" step="0.01"/></div>
+<div class="form-field"><label>Motivo</label><input name="motivo" required maxlength="300"/></div>
+</div><div class="form-actions"><button class="btn btn-primary" type="submit">Guardar movimiento</button></div>
+</form></div>

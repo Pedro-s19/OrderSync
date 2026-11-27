@@ -1,0 +1,30 @@
+@using System.Text.Json
+@model JsonElement
+@{
+    var id = Model.GetProperty("facturaId").ToString();
+    ViewData["Title"] = $"Factura #{id}";
+    var payments = Model.TryGetProperty("pagos", out var p) && p.ValueKind == JsonValueKind.Array
+        ? p.EnumerateArray().ToList() : new List<JsonElement>();
+    var currency = System.Globalization.CultureInfo.GetCultureInfo("es-CO");
+}
+<div class="page-heading"><div><span class="eyebrow">FACTURACIÓN</span><h1>Factura #@id</h1><p>Detalle del cobro, descuentos y medios de pago registrados.</p></div><a class="btn btn-secondary" asp-action="Index" asp-route-modulo="Facturas">← Volver a facturas</a></div>
+<div class="stats-grid">
+    <div class="stat-card"><span>Pedido</span><strong>#@Model.GetProperty("pedidoId")</strong></div>
+    <div class="stat-card"><span>Fecha</span><strong>@Model.GetProperty("fecha")</strong></div>
+    <div class="stat-card"><span>Total</span><strong>@Model.GetProperty("total").GetDecimal().ToString("C", currency)</strong></div>
+</div>
+<div class="panel"><div class="panel-heading"><div><h2>Resumen de factura</h2></div></div>
+    <div class="detail-grid">
+        <div><span>Subtotal</span><strong>@Model.GetProperty("subtotal").GetDecimal().ToString("C", currency)</strong></div>
+        <div><span>Descuento</span><strong>@Model.GetProperty("descuento").GetDecimal().ToString("C", currency)</strong></div>
+        <div><span>Propina</span><strong>@Model.GetProperty("propina").GetDecimal().ToString("C", currency)</strong></div>
+        <div><span>Total pagado</span><strong>@Model.GetProperty("total").GetDecimal().ToString("C", currency)</strong></div>
+    </div>
+</div>
+<div class="panel"><div class="panel-heading"><div><h2>Pagos</h2><span class="muted">@payments.Count transacción(es)</span></div></div>
+    <div class="table-wrap"><table class="data-table"><thead><tr><th>Pago</th><th>Método</th><th>Monto</th><th>Fecha</th></tr></thead><tbody>
+    @if (payments.Count == 0) { <tr><td colspan="4">No hay pagos asociados.</td></tr> }
+    @foreach (var payment in payments)
+    { <tr><td>#@payment.GetProperty("pagoId")</td><td>@payment.GetProperty("metodo")</td><td>@payment.GetProperty("monto").GetDecimal().ToString("C", currency)</td><td>@payment.GetProperty("fecha")</td></tr> }
+    </tbody></table></div>
+</div>

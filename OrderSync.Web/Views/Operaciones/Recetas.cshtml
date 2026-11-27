@@ -1,0 +1,66 @@
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Recetas";
+    var products = ViewBag.Products as List<OrderSync.Web.Services.ProductDto> ?? new();
+    var recipe = ViewBag.Recipe is JsonElement value ? value : default;
+    var recipeJson = recipe.ValueKind == JsonValueKind.Array
+        ? JsonSerializer.Serialize(recipe, new JsonSerializerOptions { WriteIndented = true })
+        : "[]";
+    var isAdministrator = Context.Session.GetString("Rol") == "Administrador del Sistema";
+}
+
+<div class="page-heading">
+    <div>
+        <span class="eyebrow">INVENTARIO</span>
+        <h1>Recetas de productos</h1>
+        <p>Define los ingredientes que se descuentan al confirmar cada pedido.</p>
+    </div>
+</div>
+
+<div class="panel form-panel">
+    <form method="get">
+        <div class="form-field">
+            <label for="productoId">Producto</label>
+            <select id="productoId" name="productoId" onchange="this.form.submit()">
+                <option value="">Selecciona un producto</option>
+                @foreach (var product in products)
+                {
+                    <option value="@product.ProductoId"
+                            selected="@(ViewBag.ProductoId != null && (int)ViewBag.ProductoId == product.ProductoId)">
+                        @product.Nombre
+                    </option>
+                }
+            </select>
+        </div>
+    </form>
+
+    @if (ViewBag.ProductoId != null)
+    {
+        <h2>Ingredientes de la receta</h2>
+        <p class="muted">
+            Formato: arreglo JSON con ingredienteId y cantidad.
+            Ejemplo: [{ "ingredienteId": 1, "cantidad": 0.15 }].
+        </p>
+
+        <form asp-action="GuardarReceta" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="productoId" value="@ViewBag.ProductoId" />
+
+            <div class="form-field">
+                <label for="lineasJson">Líneas de receta (JSON)</label>
+                <textarea id="lineasJson" name="lineasJson" rows="9" required>@recipeJson</textarea>
+            </div>
+
+            @if (isAdministrator)
+            {
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">Guardar receta</button>
+                </div>
+            }
+            else
+            {
+                <p class="muted">Tu rol puede consultar las recetas, pero no modificarlas.</p>
+            }
+        </form>
+    }
+</div>

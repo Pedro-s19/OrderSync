@@ -1,0 +1,55 @@
+ORDERSYNC - DEMOSTRACION DEL FLUJO CAJERO -> COCINA
+==================================================
+
+Esta entrega amplía el proyecto MVC existente y se conecta a los endpoints reales del backend.
+Incluye estos tres pasos:
+1) Cajero consulta productos y crea un pedido (POST api/pedidos).
+2) Cajero confirma el pedido (POST api/pedidos/{id}/confirmar). El backend descuenta ingredientes por receta dentro de una transacción.
+3) Cocina consulta los pedidos confirmados y los marca como LISTO (GET api/pedidos, GET api/pedidos/{id}, POST api/pedidos/{id}/listo).
+
+IMPORTANTE: no se modificó el backend ni el esquema SQL.
+
+INSTALACION
+-----------
+1. Haz una copia de seguridad de tu carpeta OrderSync.Web actual.
+2. Extrae este ZIP.
+3. Copia la carpeta OrderSync.Web de este paquete sobre la carpeta OrderSync.Web de tu solución, reemplazando los archivos cuando pregunte.
+4. En Visual Studio abre la solución que contiene OrderSync.Api y OrderSync.Web.
+5. Configura varios proyectos de inicio: OrderSync.Api = Iniciar; OrderSync.Web = Iniciar.
+6. Inicia la API usando el perfil HTTPS. Su URL debe incluir https://localhost:7083.
+7. Inicia Web y abre el sitio.
+
+PRUEBA DEL FLUJO
+----------------
+A) Inicia sesión como Cajero.
+   - Abre Pedidos > Crear pedido.
+   - Selecciona MOSTRADOR (no exige datos extra), elige uno o más productos activos y cantidades.
+   - Crea el pedido. Debe quedar en BORRADOR.
+   - En Pedidos pulsa Confirmar y descontar stock.
+   - Si el backend responde que falta inventario o receta, revisa que la base de datos tenga ingredientes con stock suficiente y recetas asociadas a esos productos. No se fuerza ni se inventa el descuento.
+B) Cierra sesión e inicia como Cocina.
+   - Abre Pantalla de cocina.
+   - Debe aparecer el mismo pedido y sus productos.
+   - Pulsa Marcar como listo. Debe cambiar a LISTO.
+C) Regresa al Cajero y actualiza Pedidos para comprobar el nuevo estado.
+
+CONFIGURACION
+-------------
+La API se configura en OrderSync.Web/appsettings.json con https://localhost:7083/.
+El backend es el responsable de conectarse a SQL Server usando su cadena OrderSyncDb.
+Si el certificado HTTPS de desarrollo no está confiado, ejecuta en terminal de desarrollador:
+   dotnet dev-certs https --trust
+Luego reinicia Visual Studio.
+
+PERMISOS
+--------
+Cajero: crear y confirmar pedidos.
+Cocina: consultar pedidos y marcarlos como listos.
+Los permisos definitivos siguen siendo validados por la API; el frontend también oculta acciones fuera del flujo.
+
+LIMITACIONES CONOCIDAS
+----------------------
+- Esta entrega completa el flujo de demostración pedido, no todos los módulos del ERP.
+- No incluye cobro ni factura; esos son pasos posteriores del proceso.
+- No se ejecutó dotnet build en el entorno de preparación porque no tiene instalado el SDK .NET. Compila en Visual Studio antes de grabar.
+- El descuento de inventario solo se completa si los productos tienen recetas y existe stock suficiente en la base de datos.

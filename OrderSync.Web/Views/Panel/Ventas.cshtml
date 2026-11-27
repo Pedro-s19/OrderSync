@@ -1,0 +1,17 @@
+@using System.Text.Json
+@{
+ ViewData["Title"]="Reporte de ventas";
+ JsonElement report = ViewBag.Report is JsonElement r ? r : default;
+ JsonElement top = ViewBag.Top is JsonElement t ? t : default;
+}
+<div class="page-heading"><div><span class="eyebrow">FACTURACIÓN</span><h1>Reporte de ventas</h1><p>Resumen de ventas y productos más vendidos.</p></div></div>
+<div class="panel">
+<form method="get" class="filter-row"><div class="form-field"><label>Desde</label><input type="date" name="desde" value="@ViewBag.Desde"/></div><div class="form-field"><label>Hasta</label><input type="date" name="hasta" value="@ViewBag.Hasta"/></div><button class="btn btn-primary" type="submit">Consultar</button></form>
+@if(report.ValueKind==JsonValueKind.Object){
+ <div class="stats-grid"><div class="stat-card"><small>Facturas</small><strong>@report.GetProperty("totalFacturas")</strong></div><div class="stat-card"><small>Ventas totales</small><strong>@report.GetProperty("totalVentas")</strong></div><div class="stat-card"><small>Propinas</small><strong>@report.GetProperty("totalPropinas")</strong></div></div>
+ <h2>Ventas por día</h2><div class="table-wrap"><table class="data-table"><thead><tr><th>Fecha</th><th>Facturas</th><th>Subtotal</th><th>Descuentos</th><th>Propinas</th><th>Total</th></tr></thead><tbody>
+ @foreach(var day in report.GetProperty("dias").EnumerateArray()){<tr><td>@day.GetProperty("fecha")</td><td>@day.GetProperty("facturas")</td><td>@day.GetProperty("subtotal")</td><td>@day.GetProperty("descuentos")</td><td>@day.GetProperty("propinas")</td><td>@day.GetProperty("total")</td></tr>}
+ </tbody></table></div>
+}
+@if(top.ValueKind==JsonValueKind.Array){<h2>Productos más vendidos</h2><div class="table-wrap"><table class="data-table"><thead><tr><th>Producto</th><th>Cantidad</th><th>Ingresos</th></tr></thead><tbody>@foreach(var item in top.EnumerateArray()){<tr><td>@item.GetProperty("producto")</td><td>@item.GetProperty("cantidad")</td><td>@item.GetProperty("ingresos")</td></tr>}</tbody></table></div>}
+</div>
